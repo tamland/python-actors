@@ -33,11 +33,13 @@ class State(object):
 
 
 class MailboxImpl(Mailbox):
-    def __init__(self):
+    def __init__(self, dispatcher):
         super(MailboxImpl, self).__init__()
         self.state = State.WAITING
         self.state_lock = Lock()
         self._queue = deque()
+        self._actor = None
+        self._dispatcher = dispatcher
 
     def enqueue(self, item):
         self._queue.append(item)
@@ -59,6 +61,23 @@ class MailboxImpl(Mailbox):
         with self.state_lock:
             self.state = State.WAITING
 
+    def set_actor(self, actor):
+        self._actor = actor
+
+    def process_mailbox(self):
+        for _ in range(self._dispatcher.throughput):
+            envelope = self.dequeue()
+            self._actor.process_message(envelope)
+            if len(self._queue) == 0:
+                break
+            if self.closed:
+                break
+
+        self.set_idle()
+
+        if not self.closed:
+            self._dispatcher.schedule_execution(self)
+
 
 class EventBasedDispatcher(Dispatcher):
     throughput = 5
@@ -68,42 +87,29 @@ class EventBasedDispatcher(Dispatcher):
         self._executor = Executor()
 
     def create_mailbox(self):
-        return MailboxImpl()
+        return MailboxImpl(self)
 
     def dispatch(self, envelope, actor):
         actor.mailbox.enqueue(envelope)
-        self._schedule(actor)
+        self.schedule_execution(actor.mailbox)
 
     def attach(self, actor):
-        assert isinstance(actor.mailbox, Mailbox)
+        assert isinstance(actor.mailbox, MailboxImpl)
+        actor.mailbox.set_actor(actor)
         actor.mailbox.open()
 
     def detach(self, actor):
         actor.mailbox.close()
 
-    def _schedule(self, actor):
-        if len(actor.mailbox) == 0:
+    def schedule_execution(self, mailbox):
+        if len(mailbox) == 0:
             return
 
-        if actor.mailbox.state == State.WORKING:
+        if mailbox.state == State.WORKING:
             return
 
-        if actor.mailbox.set_scheduled():
-            self._executor.submit(partial(self._process_mailbox, actor))
-
-    def _process_mailbox(self, actor):
-        for _ in range(self.throughput):
-            envelope = actor.mailbox.dequeue()
-            actor.process_message(envelope)
-            if len(actor.mailbox) == 0:
-                break
-            if actor.mailbox.closed:
-                break
-
-        actor.mailbox.set_idle()
-
-        if not actor.mailbox.closed:
-            self._schedule(actor)
+        if mailbox.set_scheduled():
+            self._executor.submit(mailbox.process_mailbox)
 
     def shutdown(self):
         # self._executor.shutdown()
