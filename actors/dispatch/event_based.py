@@ -48,6 +48,17 @@ class MailboxImpl(Mailbox):
     def __len__(self):
         return len(self._queue)
 
+    def set_scheduled(self):
+        with self.state_lock:
+            if self.state == State.WAITING:
+                self.state = State.WORKING
+                return True
+        return False
+
+    def set_idle(self):
+        with self.state_lock:
+            self.state = State.WAITING
+
 
 class EventBasedDispatcher(Dispatcher):
     throughput = 5
@@ -77,13 +88,7 @@ class EventBasedDispatcher(Dispatcher):
         if actor.mailbox.state == State.WORKING:
             return
 
-        should_execute = False
-        with actor.mailbox.state_lock:
-            if actor.mailbox.state == State.WAITING:
-                should_execute = True
-                actor.mailbox.state = State.WORKING
-
-        if should_execute:
+        if actor.mailbox.set_scheduled():
             self._executor.submit(partial(self._process_mailbox, actor))
 
     def _process_mailbox(self, actor):
@@ -95,8 +100,7 @@ class EventBasedDispatcher(Dispatcher):
             if actor.mailbox.closed:
                 break
 
-        with actor.mailbox.state_lock:
-            actor.mailbox.state = State.WAITING
+        actor.mailbox.set_idle()
 
         if not actor.mailbox.closed:
             self._schedule(actor)
