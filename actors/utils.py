@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from .future import Promise
+from .ref import ActorRef
 
 __all__ = [
     'Future',
@@ -27,11 +28,12 @@ __all__ = [
 ]
 
 
-class PromiseActorRef(object):
+class PromiseActorRef(ActorRef):
     def __init__(self):
+        super(PromiseActorRef, self).__init__(None)
         self.promise = Promise()
 
-    def tell(self, message):
+    def tell(self, message, sender=None):
         self.promise.complete(message)
 
 
