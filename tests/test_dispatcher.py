@@ -21,13 +21,12 @@ from __future__ import unicode_literals
 import time
 from threading import Event
 from unittest.mock import Mock
-
-from actors.dispatch.event_based import EventBasedDispatcher, State
+from actors.dispatch.dispatcher import Dispatcher, State
 
 
 def test_mailbox_scheduling():
     barrier = Event()
-    dispatcher = EventBasedDispatcher()
+    dispatcher = Dispatcher()
 
     actor = Mock()
     actor.process_message = Mock()

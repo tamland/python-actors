@@ -20,11 +20,11 @@ from __future__ import unicode_literals
 
 from actors.actor import Actor
 from actors.cell import ActorCell
-from actors.dispatch.event_based import EventBasedDispatcher
+from actors.dispatch.dispatcher import Dispatcher
 
 
 class ActorSystem(object):
-    default_dispatcher = EventBasedDispatcher()
+    default_dispatcher = Dispatcher()
 
     future_executor = None
 
