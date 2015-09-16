@@ -112,5 +112,4 @@ class EventBasedDispatcher(Dispatcher):
             self._executor.submit(mailbox.process_mailbox)
 
     def shutdown(self):
-        # self._executor.shutdown()
-        pass
+        self._executor.shutdown()
