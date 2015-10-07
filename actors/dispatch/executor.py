@@ -18,8 +18,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import logging
 from threading import Thread
 from six.moves.queue import Queue
+
+
+logger = logging.getLogger(__name__)
 
 
 class Executor(object):
@@ -54,5 +58,5 @@ class Executor(object):
                 break
             try:
                 task()
-            except BaseException:
-                pass
+            except BaseException as e:
+                logger.exception(e)
