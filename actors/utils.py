@@ -15,17 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+from collections import namedtuple
+from actors.actor import Actor
 from .future import Promise
 from .ref import ActorRef
-
-__all__ = [
-    'Future',
-    'Promise',
-    'ask',
-]
 
 
 class PromiseActorRef(ActorRef):
@@ -56,5 +49,20 @@ def ask(actor, message):
     return sender.promise.future
 
 
-def await(future):
-    raise NotImplemented()
+class AsyncCountDownLatch(Actor):
+    CountDown = object()
+    Done = object()
+    Start = namedtuple('Start', ['count'])
+
+    def __init__(self):
+        self._count = -1
+        self._reply_to = None
+
+    def receive(self, message):
+        if message is AsyncCountDownLatch.CountDown:
+            self._count -= 1
+            if self._count == 0:
+                self._reply_to.tell(AsyncCountDownLatch.Done)
+        elif type(message) is AsyncCountDownLatch.Start:
+            self._count = message.count
+            self._reply_to = self.context.sender

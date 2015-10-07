@@ -19,6 +19,7 @@ import sys
 import traceback
 import pytest
 from actors.utils import Promise
+from .mock_compat import Mock
 
 
 def test_get_should_return_on_success():
@@ -37,3 +38,19 @@ def test_get_should_raise_on_failure():
 
     with pytest.raises(ZeroDivisionError):
         promise.future.get()
+
+
+def test_calls_callback_on_success():
+    callback = Mock()
+    promise = Promise()
+    promise.future.on_success(callback)
+    promise.success(None)
+    callback.assert_called_once_with(promise.future)
+
+
+def test_calls_callback_on_failure():
+    callback = Mock()
+    promise = Promise()
+    promise.future.on_failure(callback)
+    promise.failure(None)
+    callback.assert_called_once_with(promise.future)

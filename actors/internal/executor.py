@@ -15,9 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 from threading import Thread
 from six.moves.queue import Queue
@@ -27,18 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 class Executor(object):
-    _TERMINATE = object()
+    _INTERRUPT = object()
 
-    def __init__(self):
+    def __init__(self, num_workers=1):
         super(Executor, self).__init__()
         self._queue = Queue()
         self._workers = []
-        self._stopped = False
 
-        num_workers = 1
         for _ in range(num_workers):
             th = Thread(target=self._work)
-            th.daemon = True
             th.start()
             self._workers.append(th)
 
@@ -47,14 +41,14 @@ class Executor(object):
 
     def shutdown(self):
         for _ in self._workers:
-            self._queue.put(self._TERMINATE)
+            self._queue.put(self._INTERRUPT)
         for worker in self._workers:
             worker.join()
 
     def _work(self):
         while True:
             task = self._queue.get(block=True)
-            if task is self._TERMINATE:
+            if task is self._INTERRUPT:
                 break
             try:
                 task()

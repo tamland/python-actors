@@ -15,41 +15,70 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+import logging
+import actors.internal.cell
+import actors.internal.factory
+from actors.future import Promise
+from actors.ref import ActorRef, InternalRef
 from actors.actor import Actor
-from actors.cell import ActorCell
-from actors.dispatch.dispatcher import Dispatcher
+from actors.internal.dispatcher import Dispatcher
+from actors.internal.messages import Terminate, Start, DeadLetter
+from actors.internal.executor import Executor
 
 
-class ActorSystem(object):
-    default_dispatcher = Dispatcher()
-
-    future_executor = None
+class ActorSystem(actors.internal.factory.ActorFactory):
 
     def __init__(self):
-        self._actors = []
+        self.default_dispatcher = Dispatcher(Executor())
+        self._dead_letters = _DeadLetterRef()
+        self._terminate_promise = Promise()
+        self._init_guardian()
+        actors.internal.factory.ActorFactory.__init__(self, self, self._guardian)
 
-    def actor_of(self, cls, dispatcher=None):
-        actor = cls()
-        assert isinstance(actor, Actor)
+    def _init_guardian(self):
+        class Empty(Actor):
+            def receive(self, message):
+                pass
 
-        if dispatcher is None:
-            dispatcher = self.default_dispatcher
+            def post_stop(self):
+                pass
 
-        cell = ActorCell(
-            actor,
-            system=self,
-            dispatcher=dispatcher,
-        )
-        dispatcher.attach(cell)
+        cell = actors.internal.cell.Cell(Empty, dispatcher=self.default_dispatcher,
+                                         system=self, parent=None)
+        self._guardian = InternalRef(cell)
+        self._guardian.send_system_message(Start)
 
-        self._actors.append(cell)
+    def terminate(self):
+        self._guardian.send_system_message(Terminate)
+        self.default_dispatcher.await_shutdown()
 
-        return cell.ref
+    @property
+    def dead_letters(self):
+        return self._dead_letters
 
-    def stop(self):
-        for actor in self._actors:
-            actor.stop()
-            pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.terminate()
+
+
+class Guardian(Actor):
+    def __init__(self):
+        super(Guardian, self).__init__()
+
+    def receive(self, message):
+        assert False, "Should not be called"
+
+
+class _DeadLetterRef(ActorRef):
+    def __init__(self):
+        super(_DeadLetterRef, self).__init__(None)
+        self._logger = logging.getLogger('dead letter')
+
+    def tell(self, message, sender=None):
+        if isinstance(message, DeadLetter):
+            self._logger.debug("Message %r from %r to %r was not delivered.",
+                message.message, message.sender, message.recipient)
+        else:
+            self._logger.debug("Message %r from %r was not delivered.")

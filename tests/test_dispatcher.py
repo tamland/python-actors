@@ -15,38 +15,67 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-import time
-from threading import Event
-from unittest.mock import Mock
-from actors.dispatch.dispatcher import Dispatcher, State
+import pytest
+from actors.internal.dispatcher import Dispatcher
+from actors.internal.executor import Executor
+from actors.internal.mailbox import InternalMailbox
+from .mock_compat import Mock
 
 
-def test_mailbox_scheduling():
-    barrier = Event()
-    dispatcher = Dispatcher()
+@pytest.fixture
+def executor():
+    return Mock(spec_set=Executor)
 
-    actor = Mock()
-    actor.process_message = Mock()
-    actor.process_message.side_effect = lambda *args, **kwargs: barrier.wait()
-    actor.mailbox = dispatcher.create_mailbox()
-    mailbox = actor.mailbox
 
-    assert len(mailbox) == 0, "Prerequisite"
-    assert mailbox.state == State.WAITING, "Prerequisite"
+@pytest.fixture
+def dispatcher(executor):
+    return Dispatcher(executor)
 
-    dispatcher.dispatch(1, actor)
-    time.sleep(1)
 
-    # Dispatcher should have started processing
-    assert len(mailbox) == 0
-    assert actor.process_message.called
-    assert mailbox.state == State.WORKING
+def test_dispatch_should_enqueue_message(dispatcher):
+    mailbox = Mock(spec_set=InternalMailbox)
+    mailbox.is_closed.return_value = False
 
-    barrier.set()
-    time.sleep(1)
+    message = object()
+    dispatcher.dispatch(message, mailbox)
+    mailbox.enqueue.assert_called_once_with(message)
 
-    # Dispatcher should stop processing
-    assert mailbox.state == State.WAITING
+
+def test_dispatch_should_execute_mailbox(executor, dispatcher):
+    mailbox = Mock(spec_set=InternalMailbox)
+    mailbox.has_messages.return_value = True
+    mailbox.is_closed.return_value = False
+    mailbox.is_scheduled.return_value = False
+
+    dispatcher.dispatch(Mock(), mailbox)
+    executor.submit.assert_called_once_with(mailbox.process_messages)
+
+
+def test_dispatch_should_not_execute_on_unsuccessful_schedule(executor, dispatcher):
+    mailbox = Mock(spec_set=InternalMailbox)
+    mailbox.has_messages.return_value = True
+    mailbox.is_closed.return_value = False
+    mailbox.is_scheduled.return_value = False
+    mailbox.set_scheduled.return_value = False
+
+    dispatcher.dispatch(Mock(), mailbox)
+    assert mailbox.set_scheduled.called
+    assert not executor.submit.called
+
+
+def test_should_shutdown_executor_when_no_actor_attached(executor, dispatcher):
+    dispatcher.await_shutdown()
+    executor.shutdown.assert_called_once_with()
+
+
+def test_dispatch_should_not_deliver_when_mailbox_is_closed(executor, dispatcher):
+    mailbox = Mock(spec_set=InternalMailbox)
+    mailbox.has_messages.return_value = True
+    mailbox.is_closed.return_value = True
+
+    dispatcher.dispatch(Mock(), mailbox)
+    dispatcher.dispatch_system(Mock(), mailbox)
+
+    assert not mailbox.enqueue.called
+    assert not mailbox.set_scheduled.called
+    assert not executor.submit.called

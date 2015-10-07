@@ -17,40 +17,16 @@
 
 from collections import namedtuple
 
+Start = object()
+Restart = object()
+Resume = object()
+Terminate = object()
 
-__all__ = [
-    'no_sender',
-    'Actor',
-    'ActorContext',
-    'ActorSystem',
-    'ActorRef',
-    'Directive',
-]
+Restart = "restart"
+Terminate = "terminate"
 
-from actors.internal import messages
+Failure = namedtuple('Failure', ['ref', 'exception', 'traceback'])
+Supervise = namedtuple('Supervise', ['ref'])
+Terminated = namedtuple('Terminated', ['ref'])
 
-Envelope = namedtuple('Envelope', ['message', 'sender'])
-
-no_sender = None
-
-
-class ActorInitializationError(Exception):
-    pass
-
-
-class Directive(object):
-    Stop = messages.Terminate
-    Restart = messages.Restart
-    Resume = messages.Resume
-
-
-def default_supervisor_strategy(exception):
-    if isinstance(exception, ActorInitializationError):
-            return Directive.Stop
-    return Directive.Restart
-
-
-from .actor import Actor
-from .context import ActorContext
-from .system import ActorSystem
-from .ref import ActorRef
+DeadLetter = namedtuple('DeadLetter', ['message', 'sender', 'recipient'])

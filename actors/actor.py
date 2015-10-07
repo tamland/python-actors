@@ -15,21 +15,48 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from . import default_supervisor_strategy
 
 
 class Actor(object):
-    dispatcher = None
-    sender = None
-    ref = None
+    """ The base class implemented by all actors.
+
+    :ivar context: Provides contextual information about this actor and the
+        current message. Only valid within this actor.
+    :vartype context: :class:`ActorContext`
+
+    """
+
+    context = None
+
+    supervisor_strategy = default_supervisor_strategy
+    """ Class method. Override to provide custom supervisor behaviour for this actor. """
 
     def receive(self, message):
-        raise NotImplementedError()
+        """
+        Override to provide the actor behaviour.
+
+        :param message: The current message.
+        """
 
     def pre_start(self):
-        pass
+        """ Called asynchronous before processing any messages. """
 
     def post_stop(self):
-        pass
+        """ Called asynchronous after the actor has stopped. """
 
+    def pre_restart(self):
+        """ Called on the failed actor before it's disposed of. """
+
+    def post_restart(self):
+        """ Called on the newly created actor. """
+
+    @property
+    def sender(self):
+        """ Alias for :attr:`self.context.sender`. """
+        return self.context.sender
+
+    @property
+    def ref(self):
+        """ Alias for :attr:`self.context.self_ref`. """
+        return self.context.self_ref

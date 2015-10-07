@@ -15,20 +15,39 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-from . import no_sender, Envelope
+from . import no_sender
 
 
 class ActorRef(object):
+    __slots__ = ('_cell',)
 
-    def __init__(self, actor_cell):
-        self._actor_cell = actor_cell
+    def __init__(self, _cell):
+        self._cell = _cell
 
     def tell(self, message, sender=no_sender):
+        """ Send a message to this actor. Asynchronous fire-and-forget.
+
+        :param message: The message to send.
+        :type message: Any
+
+        :param sender: The sender of the message. If provided it will be made
+            available to the receiving actor via the :attr:`Actor.sender` attribute.
+        :type sender: :class:`Actor`
+        """
         if sender is not no_sender and not isinstance(sender, ActorRef):
             raise ValueError("Sender must be actor reference")
 
-        self._actor_cell.send_message(Envelope(message, sender))
+        self._cell.send_message(message, sender)
 
+    def __eq__(self, other):
+        return self._cell is other._cell
+
+
+class InternalRef(object):
+    __slots__ = ('_cell',)
+
+    def __init__(self, cell):
+        self._cell = cell
+
+    def send_system_message(self, message):
+        self._cell.send_system_message(message)
