@@ -1,0 +1,11 @@
+[paths]
+source = actors
+
+[run]
+branch = True
+
+[report]
+show_missing = True
+
+[html]
+directory = _reports/coverage

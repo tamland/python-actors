@@ -1,0 +1,10 @@
+include HISTORY.rst
+include LICENSE
+include README.rst
+include setup.py
+include tox.ini
+
+recursive-include actors *.py
+recursive-include examples *.py
+recursive-include tests *.py
+recursive-include docs conf.py *.rst
