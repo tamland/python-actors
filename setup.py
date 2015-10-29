@@ -12,7 +12,7 @@ with open('HISTORY.rst') as f:
 
 setup(
     name='actors',
-    version='0.1.0',
+    version='0.5.0b1',
     author='Thomas Amland',
     author_email='thomas.amland@googlemail.com',
     url='https://github.com/tamland/python-actors/',
