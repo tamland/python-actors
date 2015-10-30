@@ -45,7 +45,7 @@ class Directive(object):
 
 def default_supervisor_strategy(exception):
     if isinstance(exception, ActorInitializationError):
-            return Directive.Stop
+        return Directive.Stop
     return Directive.Restart
 
 
