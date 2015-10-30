@@ -17,7 +17,7 @@
 import sys
 import traceback
 import pytest
-from actors.utils import Promise
+from actors.utils.ask import Promise
 from .mock_compat import Mock
 
 

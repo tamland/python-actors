@@ -20,7 +20,7 @@ from actors.internal.factory import ActorFactory
 from actors.internal.messages import Supervise
 from actors.ref import InternalRef, ActorRef
 from actors.system import ActorSystem
-from actors.utils import ask, PromiseActorRef
+from actors.utils.ask import ask, PromiseActorRef
 from ..mock_compat import Mock
 
 
