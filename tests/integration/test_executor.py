@@ -15,8 +15,8 @@
 # limitations under the License.
 
 import threading
-import pytest
 from actors.internal.executor import Executor
+from ..mock_compat import Mock
 
 
 def test_executor_spawns_n_thread():
@@ -37,5 +37,16 @@ def test_shutdown_terminates_threads():
     assert threading.active_count() == threads_before
 
 
+def test_executor_ignores_errors_in_task():
+    executor = Executor()
 
+    task1 = Mock()
+    task1.side_effect = KeyError
+    task2 = Mock()
 
+    executor.submit(task1)
+    executor.submit(task2)
+    executor.shutdown()
+
+    task1.assert_called_once_with()
+    task2.assert_called_once_with()
