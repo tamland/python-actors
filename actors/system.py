@@ -32,21 +32,12 @@ class ActorSystem(actors.internal.factory.ActorFactory):
             if system_dispatcher is None else system_dispatcher
         self._dead_letters = _DeadLetterRef()
         self._terminate_promise = Promise()
-        self._init_guardian()
-        actors.internal.factory.ActorFactory.__init__(self, self, self._guardian)
 
-    def _init_guardian(self):
-        class Empty(Actor):
-            def receive(self, message):
-                pass
-
-            def post_stop(self):
-                pass
-
-        cell = actors.internal.cell.Cell(Empty,
-            dispatcher=self._system_dispatcher, system=self, parent=None)
-        self._guardian = InternalRef(cell)
+        self._guardian = InternalRef(actors.internal.cell.Cell(Guardian,
+            dispatcher=self._system_dispatcher, system=self, parent=None))
         self._guardian.send_system_message(Start)
+
+        actors.internal.factory.ActorFactory.__init__(self, self, self._guardian)
 
     def terminate(self):
         self._guardian.send_system_message(Terminate)
@@ -65,10 +56,10 @@ class ActorSystem(actors.internal.factory.ActorFactory):
 
 class Guardian(Actor):
     def __init__(self):
-        super(Guardian, self).__init__()
+        self._logger = logging.getLogger(__name__)
 
     def receive(self, message):
-        assert False, "Should not be called"
+        self._logger.error("User receive called. This should not be happen.")
 
 
 class _DeadLetterRef(ActorRef):
