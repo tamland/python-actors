@@ -27,8 +27,9 @@ from actors.internal.executor import Executor
 
 class ActorSystem(actors.internal.factory.ActorFactory):
 
-    def __init__(self):
-        self.default_dispatcher = Dispatcher(Executor())
+    def __init__(self, system_dispatcher=None):
+        self._system_dispatcher = Dispatcher(Executor()) \
+            if system_dispatcher is None else system_dispatcher
         self._dead_letters = _DeadLetterRef()
         self._terminate_promise = Promise()
         self._init_guardian()
@@ -42,14 +43,14 @@ class ActorSystem(actors.internal.factory.ActorFactory):
             def post_stop(self):
                 pass
 
-        cell = actors.internal.cell.Cell(Empty, dispatcher=self.default_dispatcher,
-                                         system=self, parent=None)
+        cell = actors.internal.cell.Cell(Empty,
+            dispatcher=self._system_dispatcher, system=self, parent=None)
         self._guardian = InternalRef(cell)
         self._guardian.send_system_message(Start)
 
     def terminate(self):
         self._guardian.send_system_message(Terminate)
-        self.default_dispatcher.await_shutdown()
+        self._system_dispatcher.await_shutdown()
 
     @property
     def dead_letters(self):

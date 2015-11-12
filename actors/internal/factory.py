@@ -48,7 +48,7 @@ class ActorFactory(object):
             raise ValueError()
 
         if dispatcher is None:
-            dispatcher = self._system.default_dispatcher
+            dispatcher = self._system._system_dispatcher
 
         from actors.internal.cell import Cell
         cell = Cell(factory, dispatcher=dispatcher, system=self._system,
