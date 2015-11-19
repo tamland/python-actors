@@ -39,14 +39,13 @@ class ActorRef(object):
         self._cell.send_message(message, sender)
 
     def __eq__(self, other):
-        return self._cell is other._cell
+        return isinstance(other, ActorRef) and other._cell is self._cell
 
 
-class InternalRef(object):
-    __slots__ = ('_cell',)
+class InternalRef(ActorRef):
 
     def __init__(self, cell):
-        self._cell = cell
+        super(InternalRef, self).__init__(cell)
 
     def send_system_message(self, message):
         self._cell.send_system_message(message)
