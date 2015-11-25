@@ -152,6 +152,9 @@ class Cell(object):
             self._parent.send_system_message(Terminated(self._self_ref))
 
     def _on_failure(self, exception):
+        logger.debug("Failure in actor '%s'. traceback:\n%s", self._self_ref,
+             traceback.format_exc())
+
         self._mailbox.suspend()
         if self._parent:
             msg = Failure(self._self_ref, exception, traceback.format_exc())
