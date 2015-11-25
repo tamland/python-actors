@@ -30,7 +30,7 @@ def test_system():
         actor = system.actor_of(Test)
         message = object()
         reply = ask(actor, message)
-        assert reply.get(timeout=10) is message
+        assert reply.get(timeout=1) is message
 
 
 def test_behaviour():
