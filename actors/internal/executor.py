@@ -41,6 +41,8 @@ class Executor(object):
     def shutdown(self):
         for _ in self._workers:
             self._queue.put(self._INTERRUPT)
+
+    def join(self):
         for worker in self._workers:
             worker.join()
 

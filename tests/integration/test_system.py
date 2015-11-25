@@ -41,3 +41,20 @@ def test_behaviour():
         actor.tell(message)
         time.sleep(1)
         behaviour.assert_called_once_with(message)
+
+
+def test_self_stop():
+    on_post_stop = Mock()
+
+    class Test(Actor):
+        def receive(self, message):
+            self.context.stop()
+
+        def post_stop(self):
+            on_post_stop()
+
+    with ActorSystem() as system:
+        actor = system.actor_of(Test)
+        actor.tell(object())
+        time.sleep(1)
+        assert on_post_stop.called

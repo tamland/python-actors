@@ -62,7 +62,8 @@ def test_dispatch_should_not_execute_on_unsuccessful_schedule(executor, dispatch
     assert not executor.submit.called
 
 
-def test_should_shutdown_executor_when_no_actor_attached(executor, dispatcher):
+@pytest.mark.xfail
+def test_should_shutdown_executor_when_no_actors_attached(executor, dispatcher):
     dispatcher.await_shutdown()
     executor.shutdown.assert_called_once_with()
 

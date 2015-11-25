@@ -19,7 +19,7 @@ from actors import Actor, ActorSystem, Envelope
 from actors.internal.cell import Cell
 from actors.internal.dispatcher import Dispatcher
 from actors.internal.mailbox import InternalMailbox
-from actors.internal.messages import Start, Terminate, Supervise, DeadLetter
+from actors.internal.messages import Start, Terminate, Supervise, DeadLetter, Terminated
 from actors.ref import InternalRef, ActorRef
 from .mock_compat import Mock, MagicMock
 
@@ -72,13 +72,20 @@ def test_terminate_flush_mailbox(cell, mailbox):
     mailbox.flush_messages.assert_called_once_with()
 
 
-def test_terminate_sender_unhandled_messages_to_dead_letters(cell, mailbox, system):
+def test_terminate_sends_unhandled_messages_to_dead_letters(cell, mailbox, system):
     message = Mock()
     sender = Mock()
     mailbox.flush_messages.return_value = [Envelope(message, sender)]
     cell.handle_system_message(Terminate)
-    system.dead_letters.tell.assert_called_once_with(DeadLetter(
-        message, sender, ActorRef(cell)))
+    system.dead_letters.tell.assert_called_once_with(DeadLetter(message, sender, ActorRef(cell)))
+
+
+def test_sending_message_to_terminated_actor_should_forward_to_dead_letters(cell, system):
+    cell.handle_system_message(Terminate)
+    message = Mock()
+    sender = Mock()
+    cell.send_message(message, sender)
+    system.dead_letters.tell.assert_called_once_with(DeadLetter(message, sender, ActorRef(cell)))
 
 
 def test_terminate_detach_actor_from_dispatcher(cell, mailbox, dispatcher):
@@ -93,12 +100,47 @@ def test_terminate_sends_terminate_message_to_children(cell):
     child.send_system_message.assert_called_once_with(Terminate)
 
 
-def test_sending_message_to_terminated_actor_should_forward_to_dead_letters(cell, system):
+def test_terminate_sends_terminated_message_to_supervisor(cell, supervisor):
     cell.handle_system_message(Terminate)
-    message = Mock()
-    sender = Mock()
-    cell.send_message(message, sender)
-    system.dead_letters.tell.assert_called_once_with(DeadLetter(
-        message, sender, ActorRef(cell)))
+    supervisor.send_system_message.assert_called_once_with(Terminated(InternalRef(cell)))
 
+
+def test_supervising_actors_finalize_after_children_have_terminated(actor, cell, mailbox,
+        supervisor, dispatcher):
+    child = Mock(spec_set=InternalRef)
+    cell.handle_system_message(Supervise(child))
+
+    cell.handle_system_message(Terminate)
+    assert not dispatcher.detach.called
+    assert not supervisor.send_system_message.called
+    assert not actor.post_stop.called
+
+    cell.handle_system_message(Terminated(child))
+    dispatcher.detach.assert_called_once_with(mailbox)
+    supervisor.send_system_message.assert_called_once_with(Terminated(InternalRef(cell)))
+    actor.post_stop.assert_called_once_with()
+
+
+def test_terminates_suspends_mailbox___closes_after_children_have_terminated(cell, mailbox):
+    child = Mock(spec_set=InternalRef)
+    cell.handle_system_message(Supervise(child))
+
+    cell.handle_system_message(Terminate)
+    mailbox.suspend.assert_called_once_with()
+    assert not mailbox.close.called
+
+    cell.handle_system_message(Terminated(child))
+    mailbox.close.assert_called_once_with()
+
+
+def test_terminating_children_does_not_terminate_supervisor(actor, cell, mailbox, supervisor, dispatcher):
+    child = Mock(spec_set=InternalRef)
+    cell.handle_system_message(Supervise(child))
+
+    cell.handle_system_message(Terminated(child))
+    assert not dispatcher.detach.called
+    assert not supervisor.send_system_message.called
+    assert not actor.post_stop.called
+    assert not mailbox.suspend.called
+    assert not mailbox.close.called
 

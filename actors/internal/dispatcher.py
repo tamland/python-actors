@@ -53,7 +53,7 @@ class Dispatcher(object):
             self._attached_count -= 1
             if self._attached_count == 0:
                 self._terminated.complete(None)
-        mailbox.close()
+                self._executor.shutdown()
 
     def schedule_execution(self, mailbox):
         if mailbox.is_closed() or mailbox.is_scheduled() or not mailbox.has_messages():
@@ -61,11 +61,6 @@ class Dispatcher(object):
 
         if mailbox.set_scheduled():
             self._executor.submit(mailbox.process_messages)
-
-    def await_shutdown(self):
-        if self._attached_count > 0:
-            self._terminated.future.get()
-        self._executor.shutdown()
 
 
 class PinnedDispatcher(Dispatcher):

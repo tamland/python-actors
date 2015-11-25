@@ -82,10 +82,12 @@ def test_should_process_system_messages_when_suspended(actor, mailbox):
     assert actor.handle_system_message.called
 
 
-def test_should_not_process_system_messages_when_closed(actor, mailbox):
+def test_should_not_process_messages_when_closed(actor, mailbox):
     mailbox.close()
+    mailbox.enqueue(Mock())
     mailbox.enqueue_system(Mock())
     mailbox.process_messages()
+    assert not actor.handle_message.called
     assert not actor.handle_system_message.called
 
 

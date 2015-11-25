@@ -32,8 +32,9 @@ def test_shutdown_terminates_threads():
 
     for i in range(10):
         executor.submit(lambda: None)
-
     executor.shutdown()
+    executor.join()
+
     assert threading.active_count() == threads_before
 
 
@@ -47,6 +48,7 @@ def test_executor_ignores_errors_in_task():
     executor.submit(task1)
     executor.submit(task2)
     executor.shutdown()
+    executor.join()
 
     task1.assert_called_once_with()
     task2.assert_called_once_with()

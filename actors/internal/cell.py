@@ -42,10 +42,13 @@ class Cell(object):
 
         self._parent = parent
         self._children = []
+        self._stopped = False
         self._self_ref = InternalRef(self)
 
         self._context = actors.context.ActorContext(system, self._self_ref)
-        self._context.self_ref = ActorRef(self)
+
+        # TODO: shouldn't expose the internal ref
+        self._context.self_ref = self._self_ref
 
     def send_message(self, message, sender):
         if not self._mailbox.is_closed():
@@ -93,19 +96,12 @@ class Cell(object):
                 self._on_failure(ActorInitializationError())
 
         elif message is Terminate:
-            self._mailbox.close()
+            self._stopped = True
+            self._mailbox.suspend()
             for child in self._children:
                 child.send_system_message(Terminate)
-            self._dispatcher.detach(self._mailbox)
-            try:
-                self._actor.post_stop()
-            except BaseException:
-                logger.warn("Failure in post_stop", exc_info=True)
-            self._actor = None
-
-            for envelope in self._mailbox.flush_messages():
-                self._system.dead_letters.tell(DeadLetter(
-                    envelope.message, envelope.sender, self._self_ref))
+            if len(self._children) == 0:
+                self._shutdown()
 
         elif type(message) is Supervise:
             try:
@@ -122,6 +118,9 @@ class Cell(object):
             except (KeyError, AttributeError, AssertionError):
                 logger.error("Failed to remove child", exc_info=True)
 
+            if self._stopped and len(self._children) == 0:
+                self._shutdown()
+
         elif type(message) is Failure:
             try:
                 directive = self._actor.__class__.supervisor_strategy(message.exception)
@@ -134,6 +133,22 @@ class Cell(object):
                 message.ref.send_system_message(directive)
         else:
             logger.error("Got unknown system message '%r'", message)
+
+    def _shutdown(self):
+        self._mailbox.close()
+        self._dispatcher.detach(self._mailbox)
+        try:
+            self._actor.post_stop()
+        except BaseException:
+            logger.warn("Failure in post_stop", exc_info=True)
+        self._actor = None
+
+        for envelope in self._mailbox.flush_messages():
+            self._system.dead_letters.tell(DeadLetter(
+                envelope.message, envelope.sender, self._self_ref))
+
+        if self._parent:
+            self._parent.send_system_message(Terminated(self._self_ref))
 
     def _on_failure(self, exception):
         self._mailbox.suspend()

@@ -20,7 +20,7 @@ from actors.ref import ActorRef
 from .mock_compat import Mock
 from actors import Envelope, ActorInitializationError
 from actors.internal.cell import Cell
-from actors.internal.messages import Start, Failure, Terminate, Restart
+from actors.internal.messages import Start, Failure, Terminate, Restart, Terminated
 
 
 @pytest.fixture
@@ -115,8 +115,10 @@ def test_failure_in_restart_hook_should_send_failure_to_supervisor(actor, superv
 def test_failure_in_stop_hook_should_not_send_failure_to_supervisor(actor, supervisor, running_cell):
     actor.post_stop.side_effect = AttributeError()
     running_cell.handle_system_message(Terminate)
+
     actor.post_stop.assert_called_once_with()
-    assert not supervisor.send_system_message.called
+    for call in supervisor.send_system_message.call_args_list:
+        assert not isinstance(call[0][0], Failure)
 
 
 def test_failure_in_start_hook_stops_actor(actor, supervisor, running_cell):
