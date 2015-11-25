@@ -31,11 +31,15 @@ class ActorContext(actors.internal.factory.ActorFactory):
 
     :ivar parent: The parent of this actor.
     :vartype parent: :class:`ActorRef`
+
+    :ivar system: The system  this actor belongs to.
+    :vartype system: :class:`ActorSystem`
     """
 
     sender = None
     self_ref = None
     parent = None
+    system = None
 
     def stop(self):
         self.self_ref.send_system_message(Terminate)

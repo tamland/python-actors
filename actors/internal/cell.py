@@ -46,6 +46,7 @@ class Cell(object):
         self._self_ref = InternalRef(self)
 
         self._context = actors.context.ActorContext(system, self._self_ref)
+        self._context.system = system
 
         # TODO: shouldn't expose the internal ref
         self._context.self_ref = self._self_ref
