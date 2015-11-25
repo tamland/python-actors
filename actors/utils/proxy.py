@@ -19,6 +19,13 @@ from actors.actor import Actor
 
 
 def as_proxy(actor_ref):
+    """
+    Create a proxy wrapper from an existing reference. The actor MUST implement the
+    :class:`ProxyActor` interface.
+
+    :param actor_ref: The actor reference.
+    :type actor_ref: :class:`ActorRef`
+    """
     return ProxyRef(actor_ref)
 
 

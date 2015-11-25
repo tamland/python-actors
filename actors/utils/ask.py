@@ -29,7 +29,8 @@ class PromiseActorRef(ActorRef):
 
 def ask(actor, message):
     """
-    Send a message to `actor` and return a future that will hold the result.
+    Send a message to `actor` and return a :class:`Future` holding a possible
+    reply.
 
     To receive a result, the actor MUST send a reply to `sender`.
 

@@ -28,6 +28,16 @@ from actors.internal.executor import Executor
 class ActorSystem(actors.internal.factory.ActorFactory):
 
     def __init__(self, system_dispatcher=None):
+        """
+        The actor system is responsible for creating, configuring and stopping actors and
+        dispatchers.
+
+        Normally, only one system per application should be created.
+
+        :param system_dispatcher: Override the dispatcher used by the system. This also acts as the
+            default dispatcher for new actors.
+        :type system_dispatcher: :class:`Dispatcher`
+        """
         self._system_dispatcher = Dispatcher(Executor()) \
             if system_dispatcher is None else system_dispatcher
         self._dead_letters = _DeadLetterRef()
