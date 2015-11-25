@@ -1,17 +1,9 @@
-.. toctree::
-   :maxdepth: 2
-
 .. include:: ../README.rst
 
+.. toctree::
+    :maxdepth: 2
 
-API Reference
--------------
-
-.. automodule:: actors
-    :members:
-    :undoc-members:
-    :inherited-members:
-
+    api
 
 
 Indices and tables
