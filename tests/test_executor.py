@@ -14,28 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
 from actors.internal.executor import Executor
-from ..mock_compat import Mock
-
-
-def test_executor_spawns_n_thread():
-    threads_before = threading.active_count()
-    executor = Executor(20)
-    assert threading.active_count() == threads_before + 20
-    executor.shutdown()
-
-
-def test_shutdown_terminates_threads():
-    threads_before = threading.active_count()
-    executor = Executor(20)
-
-    for i in range(10):
-        executor.submit(lambda: None)
-    executor.shutdown()
-    executor.join()
-
-    assert threading.active_count() == threads_before
+from .mock_compat import Mock
 
 
 def test_executor_ignores_errors_in_task():
