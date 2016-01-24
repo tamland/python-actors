@@ -40,7 +40,7 @@ Obligatory greeter
             print("Hello %s" % message)
 
     system = ActorSystem()
-    greeter = system.actor_of(GreetingActor)
+    greeter = system.actor_of(Greeter)
     greeter.tell("world")
     system.terminate()
 
